@@ -29,6 +29,7 @@ class Server(socketserver.TCPServer):
 class PlaylistGenerator:
     username = ""
     access_token = ""
+    spotipy = None
 
     def Authorize(self, username):
         self.username = username
@@ -61,18 +62,40 @@ class PlaylistGenerator:
         tokens = json.loads(access_token_response.text)
         self.access_token = tokens['access_token']
         print('Access token is: ', self.access_token)
+        self.spotipy = spotipy.Spotify(auth=self.access_token)
+        self.spotipy.trace = False
 
-    def CreatePlaylist(self, playlist_name,public=True):
-        sp = spotipy.Spotify(auth=self.access_token)
-        sp.trace = False
+    def CreatePlaylist(self, playlist_name,playlist_artists,number_songs_per_artist,public=True):
         #Cannot specify description without JSON errors resulting in Spotipy
-        playlists = sp.user_playlist_create(self.username, playlist_name, public)
-        pprint.pprint(playlists)
+        playlistId = self.spotipy.user_playlist_create(self.username, playlist_name, public)["id"]
+        tracksByArtists = []
+        for artist in playlist_artists.split(","):
+            (artist_name, artist_id) = self.FindArtist(artist)
+            print(artist_name, "-", artist_id)
+            tracksByArtists.extend(self.FindTracks(artist_name,artist_id,number_songs_per_artist))
+        pprint.pprint(tracksByArtists)
+        playlist = self.spotipy.user_playlist_add_tracks(self.username, playlistId, [x[2] for x in tracksByArtists])
+        pprint.pprint(playlist)
+
+    def FindArtist(self,artist_name):
+        print("Searching for artist",artist_name,"...")
+        foundArtists = self.spotipy.search(artist_name,type='artist')["artists"]["items"]
+        for artist in foundArtists:
+            if artist["name"] == artist_name:
+                return (artist_name, artist["id"])
+
+    def FindTracks(self,artist_name,artist_id,number_songs_per_artist):
+        print("Finding top tracks for artist",artist_name,"...")
+        top_tracks = self.spotipy.artist_top_tracks(artist_id)["tracks"][:number_songs_per_artist]
+        return [(artist_name,x["name"],x["id"]) for x in top_tracks]
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("-g", "--generate", help="Generate a new playlist")
     parser.add_argument("-u","--user", help="User for playlist operations")
+    parser.add_argument("-s", "--source_artists", help="Artists used as a source for the generated playlist as a comma-delimited list")
+    parser.add_argument("-n", "--number_of_songs_per_artist", type=int,default=5, help="Number of songs included in the generated playlist for each artist")
     args = parser.parse_args()
     print("Generating playlist '", args.generate, "' for user '", args.user, "'...", sep="")
     pg = PlaylistGenerator()
@@ -81,4 +104,4 @@ if __name__ == "__main__":
     else:
         print("No user specified. User specific operations will not be functional.")
     if args.user and args.generate:
-        pg.CreatePlaylist(args.generate)
+        pg.CreatePlaylist(args.generate, args.source_artists, args.number_of_songs_per_artist)
