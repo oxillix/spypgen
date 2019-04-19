@@ -1,0 +1,2 @@
+# spypgen
+SpotiPy Playlist Generator
