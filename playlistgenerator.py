@@ -1,6 +1,8 @@
 import argparse
 import http.server
+import itertools
 import json
+import operator
 import os
 import pprint 
 import requests
@@ -9,6 +11,7 @@ import spotipy
 import spotipy.util as util
 import sys
 import webbrowser 
+from tracklistscraper import TracklistScraper
 from http.server import HTTPServer, BaseHTTPRequestHandler
 
 done = False
@@ -27,11 +30,13 @@ class Server(socketserver.TCPServer):
 
 
 class PlaylistGenerator:
-    username = ""
-    access_token = ""
-    spotipy = None
+    def __init__(self):
+        self.username = ""
+        self.access_token = ""
+        self.spotipy = None
+        self.tracklist_scraper = TracklistScraper()
 
-    def Authorize(self, username):
+    def authorize(self, username):
         self.username = username
         scope = 'playlist-modify-public'
         authorize_url = "https://accounts.spotify.com/authorize"
@@ -65,43 +70,51 @@ class PlaylistGenerator:
         self.spotipy = spotipy.Spotify(auth=self.access_token)
         self.spotipy.trace = False
 
-    def CreatePlaylist(self, playlist_name,playlist_artists,number_songs_per_artist,public=True):
+    def create_playlist(self, playlist_name,playlist_artists,number_songs_per_artist,number_of_tracklist_songs_per_artist,public=True):
         #Cannot specify description without JSON errors resulting in Spotipy
         playlistId = self.spotipy.user_playlist_create(self.username, playlist_name, public)["id"]
-        tracksByArtists = []
+        tracks_by_artists = []
         for artist in playlist_artists.split(","):
-            (artist_name, artist_id) = self.FindArtist(artist)
+            (artist_name, artist_id) = self.find_artist(artist)
             print(artist_name, "-", artist_id)
-            tracksByArtists.extend(self.FindTracks(artist_name,artist_id,number_songs_per_artist))
-        pprint.pprint(tracksByArtists)
-        playlist = self.spotipy.user_playlist_add_tracks(self.username, playlistId, [x[2] for x in tracksByArtists])
-        pprint.pprint(playlist)
+            tracks_by_artists.extend(self.find_tracks(artist_name,artist_id,number_songs_per_artist, number_of_tracklist_songs_per_artist))
+        uniq_tracks_by_artists = set(tracks_by_artists)
+        playlist = self.spotipy.user_playlist_add_tracks(self.username, playlistId, set([track[2] for track in uniq_tracks_by_artists]))
+        pprint.pprint(uniq_tracks_by_artists)
 
-    def FindArtist(self,artist_name):
+    def find_artist(self,artist_name):
         print("Searching for artist",artist_name,"...")
         foundArtists = self.spotipy.search(artist_name,type='artist')["artists"]["items"]
         for artist in foundArtists:
             if artist["name"] == artist_name:
                 return (artist_name, artist["id"])
 
-    def FindTracks(self,artist_name,artist_id,number_songs_per_artist):
+    def find_tracks(self,artist_name,artist_id,number_songs_per_artist,number_of_tracklist_songs_per_artist):
         print("Finding top tracks for artist",artist_name,"...")
         top_tracks = self.spotipy.artist_top_tracks(artist_id)["tracks"][:number_songs_per_artist]
-        return [(artist_name,x["name"],x["id"]) for x in top_tracks]
+        recent_tracks = filter(None, [self.find_track(track_name) for track_name in self.tracklist_scraper.get_artists_popular_recent_tracks(artist_name,number_of_tracklist_songs_per_artist)])
+        return set([(artist_name,track["name"],track["id"]) for track in itertools.chain(top_tracks,recent_tracks)])
 
+    def find_track(self,track_name):
+        print("Searching for",track_name)
+        results = self.spotipy.search(track_name.replace("ft.","").replace("&",""),type='track')['tracks']['items']
+        if len(results) == 0:
+            return None
+        return results[0]
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("-g", "--generate", help="Generate a new playlist")
     parser.add_argument("-u","--user", help="User for playlist operations")
     parser.add_argument("-s", "--source_artists", help="Artists used as a source for the generated playlist as a comma-delimited list")
-    parser.add_argument("-n", "--number_of_songs_per_artist", type=int,default=5, help="Number of songs included in the generated playlist for each artist")
+    parser.add_argument("-n", "--number_of_songs_per_artist", type=int,default=5, help="Number of the artist's popular Spotify songs included in the generated playlist for each artist")
+    parser.add_argument("--number_of_tracklist_songs_per_artist", type=int,default=3, help="Number of the artist's popular Spotify songs included in the generated playlist for each artist")
     args = parser.parse_args()
     print("Generating playlist '", args.generate, "' for user '", args.user, "'...", sep="")
     pg = PlaylistGenerator()
     if args.user:
-        pg.Authorize(args.user)
+        pg.authorize(args.user)
     else:
         print("No user specified. User specific operations will not be functional.")
     if args.user and args.generate:
-        pg.CreatePlaylist(args.generate, args.source_artists, args.number_of_songs_per_artist)
+        pg.create_playlist(args.generate, args.source_artists, args.number_of_songs_per_artist, args.number_of_tracklist_songs_per_artist)
