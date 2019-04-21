@@ -1,4 +1,3 @@
-import argparse
 import http.server
 import itertools
 import json
@@ -11,7 +10,7 @@ import spotipy
 import spotipy.util as util
 import sys
 import webbrowser 
-from tracklistscraper import TracklistScraper
+from spypgen.tracklistscraper import TracklistScraper
 from http.server import HTTPServer, BaseHTTPRequestHandler
 
 done = False
@@ -43,13 +42,15 @@ class PlaylistGenerator:
         token_url = "https://accounts.spotify.com/api/token"
 
         redirect_uri = "http://localhost:8080"
-        client_id = os.environ["SPOTIFY_CLIENT_ID"]
-        client_secret = os.environ["SPOTIFY_CLIENT_SECRET"]
+        if "SPOTIFY_CLIENT_ID" in os.environ and "SPOTIFY_CLIENT_SECRET" in os.environ:
+            client_id = os.environ["SPOTIFY_CLIENT_ID"]
+            client_secret = os.environ["SPOTIFY_CLIENT_SECRET"]
+        else:
+            print("'SPOTIFY_CLIENT_ID' and 'SPOTIFY_CLIENT_SECRET' environment variables must be set")
+            return False
 
         authorization_url = authorize_url + '?client_id=' + client_id + '&response_type=code&redirect_uri=' + redirect_uri + '&scope=' + scope
-
         print("Attempting to access ", authorization_url)
-
         webbrowser.open_new_tab(authorization_url)
 
         httpd = Server(("localhost", 8080), RequestHandler)
@@ -69,18 +70,20 @@ class PlaylistGenerator:
         print('Access token is: ', self.access_token)
         self.spotipy = spotipy.Spotify(auth=self.access_token)
         self.spotipy.trace = False
+        return True
 
     def create_playlist(self, playlist_name,playlist_artists,number_songs_per_artist,number_of_tracklist_songs_per_artist,public=True):
         #Cannot specify description without JSON errors resulting in Spotipy
         playlistId = self.spotipy.user_playlist_create(self.username, playlist_name, public)["id"]
         tracks_by_artists = []
-        for artist in playlist_artists.split(","):
+        for artist in playlist_artists:
             (artist_name, artist_id) = self.find_artist(artist)
             print(artist_name, "-", artist_id)
             tracks_by_artists.extend(self.find_tracks(artist_name,artist_id,number_songs_per_artist, number_of_tracklist_songs_per_artist))
-        uniq_tracks_by_artists = set(tracks_by_artists)
-        playlist = self.spotipy.user_playlist_add_tracks(self.username, playlistId, set([track[2] for track in uniq_tracks_by_artists]))
-        pprint.pprint(uniq_tracks_by_artists)
+        if len(tracks_by_artists) != 0:
+            uniq_tracks_by_artists = set(tracks_by_artists)
+            playlist = self.spotipy.user_playlist_add_tracks(self.username, playlistId, set([track[2] for track in uniq_tracks_by_artists]))
+            pprint.pprint(uniq_tracks_by_artists)
 
     def find_artist(self,artist_name):
         print("Searching for artist",artist_name,"...")
@@ -102,19 +105,3 @@ class PlaylistGenerator:
             return None
         return results[0]
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-g", "--generate", help="Generate a new playlist")
-    parser.add_argument("-u","--user", help="User for playlist operations")
-    parser.add_argument("-s", "--source_artists", help="Artists used as a source for the generated playlist as a comma-delimited list")
-    parser.add_argument("-n", "--number_of_songs_per_artist", type=int,default=5, help="Number of the artist's popular Spotify songs included in the generated playlist for each artist")
-    parser.add_argument("--number_of_tracklist_songs_per_artist", type=int,default=3, help="Number of the artist's popular Spotify songs included in the generated playlist for each artist")
-    args = parser.parse_args()
-    print("Generating playlist '", args.generate, "' for user '", args.user, "'...", sep="")
-    pg = PlaylistGenerator()
-    if args.user:
-        pg.authorize(args.user)
-    else:
-        print("No user specified. User specific operations will not be functional.")
-    if args.user and args.generate:
-        pg.create_playlist(args.generate, args.source_artists, args.number_of_songs_per_artist, args.number_of_tracklist_songs_per_artist)
