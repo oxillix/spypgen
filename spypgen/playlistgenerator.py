@@ -71,9 +71,14 @@ class PlaylistGenerator:
         return True
 
     def set_song_count_preferences(self, total_per_artist, from_popular_spotify, from_recent_setlists):
+        total_per_artist = total_per_artist if total_per_artist is not None else self.songs_per_artist.total
+        from_popular_spotify = from_popular_spotify if from_popular_spotify is not None else self.songs_per_artist.from_popular_spotify
+        from_recent_setlists = from_recent_setlists if from_recent_setlists is not None else self.songs_per_artist.from_recent_setlists
         self.songs_per_artist = SongCounts(total_per_artist, from_popular_spotify, from_recent_setlists)
 
     def set_tracklist_search_preferences(self, num_searched, inclusion_threshold):
+        num_searched = num_searched if num_searched is not None else self.tracklist_search_pref.num_searched
+        inclusion_threshold = inclusion_threshold if inclusion_threshold is not None else self.tracklist_search_pref.inclusion_threshold
         self.songs_per_artist = TracklistPreferences(num_searched, inclusion_threshold)
 
     def create_playlist(self,playlist_name,playlist_artists,public=True):
