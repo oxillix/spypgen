@@ -1,0 +1,16 @@
+{
+    "name": "",
+    "artists": ["Mat Zo","Tinlicker","Grum","ALPHA 9","Jason Ross","Gabriel & Dresden"],
+    "targetSongCounts":
+    {
+        "maxSongsPerArtist": 8,
+        "recentSetListSongs": 5,
+        "topSpotifySongs": 3
+    },
+    "setlists":
+    {
+        "numberSearched": 5,
+        "inclusionThreshold": 0.5
+    },
+    "strictSearch": false
+}

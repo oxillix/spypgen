@@ -1,4 +1,3 @@
-#import requests
 from bs4 import BeautifulSoup
 import urllib.request
 import pprint 
@@ -18,9 +17,9 @@ class TracklistScraper:
         recent_tracks = []
         for track in sorted_tracks:
             if plays_by_track[track][0]/max_tracklists < threshold:
-                break;
+                break
             if len(recent_tracks) == max_num_tracks:
-                break;
+                break
             print(track,'was played in',plays_by_track[track][0],'/',max_tracklists,'of',artist_name,'\'s recent sets')
             recent_tracks.append(track)
         return recent_tracks

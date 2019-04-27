@@ -12,6 +12,7 @@ import sys
 import webbrowser 
 from spypgen.tracklistscraper import TracklistScraper
 from http.server import HTTPServer, BaseHTTPRequestHandler
+from collections import namedtuple
 
 done = False
 
@@ -27,33 +28,30 @@ class RequestHandler(BaseHTTPRequestHandler):
 class Server(socketserver.TCPServer):
     allow_reuse_address = True
 
-
+SongCounts = namedtuple('SongCounts', ['total', 'from_popular_spotify', 'from_recent_setlists'])
+TracklistPreferences = namedtuple('TracklistPreferences', ['num_searched', 'inclusion_threshold'])
 class PlaylistGenerator:
     def __init__(self):
         self.username = ""
         self.access_token = ""
         self.spotipy = None
+        self.songs_per_artist = SongCounts(total=5,from_popular_spotify=5,from_recent_setlists=0)
+        self.tracklist_search_pref = TracklistPreferences(5,0.5)
         self.tracklist_scraper = TracklistScraper()
 
-    def authorize(self, username):
+    def authorize(self, username, client_id, client_secret, client_port):
         self.username = username
         scope = 'playlist-modify-public'
         authorize_url = "https://accounts.spotify.com/authorize"
         token_url = "https://accounts.spotify.com/api/token"
 
-        redirect_uri = "http://localhost:8080"
-        if "SPOTIFY_CLIENT_ID" in os.environ and "SPOTIFY_CLIENT_SECRET" in os.environ:
-            client_id = os.environ["SPOTIFY_CLIENT_ID"]
-            client_secret = os.environ["SPOTIFY_CLIENT_SECRET"]
-        else:
-            print("'SPOTIFY_CLIENT_ID' and 'SPOTIFY_CLIENT_SECRET' environment variables must be set")
-            return False
+        redirect_uri = "http://localhost:" + str(client_port)
 
         authorization_url = authorize_url + '?client_id=' + client_id + '&response_type=code&redirect_uri=' + redirect_uri + '&scope=' + scope
         print("Attempting to access ", authorization_url)
         webbrowser.open_new_tab(authorization_url)
 
-        httpd = Server(("localhost", 8080), RequestHandler)
+        httpd = Server(("localhost", client_port), RequestHandler)
         while not done:
             httpd.handle_request()
         print("Requested path is ", request_path)
@@ -72,18 +70,27 @@ class PlaylistGenerator:
         self.spotipy.trace = False
         return True
 
-    def create_playlist(self, playlist_name,playlist_artists,number_songs_per_artist,number_of_tracklist_songs_per_artist,public=True):
+    def set_song_count_preferences(self, total_per_artist, from_popular_spotify, from_recent_setlists):
+        self.songs_per_artist = SongCounts(total_per_artist, from_popular_spotify, from_recent_setlists)
+
+    def set_tracklist_search_preferences(self, num_searched, inclusion_threshold):
+        self.songs_per_artist = TracklistPreferences(num_searched, inclusion_threshold)
+
+    def create_playlist(self,playlist_name,playlist_artists,public=True):
         #Cannot specify description without JSON errors resulting in Spotipy
         playlistId = self.spotipy.user_playlist_create(self.username, playlist_name, public)["id"]
+        print("Created playlist '",playlist_name,"'")
         tracks_by_artists = []
         for artist in playlist_artists:
             (artist_name, artist_id) = self.find_artist(artist)
-            print(artist_name, "-", artist_id)
-            tracks_by_artists.extend(self.find_tracks(artist_name,artist_id,number_songs_per_artist, number_of_tracklist_songs_per_artist))
+            tracks_by_artists.extend(self.find_tracks(artist_name,artist_id))
         if len(tracks_by_artists) != 0:
             uniq_tracks_by_artists = set(tracks_by_artists)
-            playlist = self.spotipy.user_playlist_add_tracks(self.username, playlistId, set([track[2] for track in uniq_tracks_by_artists]))
-            pprint.pprint(uniq_tracks_by_artists)
+            self.spotipy.user_playlist_add_tracks(self.username, playlistId, set([track[2] for track in uniq_tracks_by_artists]))
+            print("Added", len(uniq_tracks_by_artists), "tracks to playlist '",playlist_name,"'")
+            print("Tracklist:")
+            for track in uniq_tracks_by_artists:
+                print(track[1],'-',track[0])
 
     def find_artist(self,artist_name):
         print("Searching for artist",artist_name,"...")
@@ -92,11 +99,19 @@ class PlaylistGenerator:
             if artist["name"] == artist_name:
                 return (artist_name, artist["id"])
 
-    def find_tracks(self,artist_name,artist_id,number_songs_per_artist,number_of_tracklist_songs_per_artist):
+    def find_tracks(self,artist_name,artist_id):
         print("Finding top tracks for artist",artist_name,"...")
-        top_tracks = self.spotipy.artist_top_tracks(artist_id)["tracks"][:number_songs_per_artist]
-        recent_tracks = filter(None, [self.find_track(track_name) for track_name in self.tracklist_scraper.get_artists_popular_recent_tracks(artist_name,number_of_tracklist_songs_per_artist)])
-        return set([(artist_name,track["name"],track["id"]) for track in itertools.chain(top_tracks,recent_tracks)])
+        top_tracks = []
+        recent_tracks = []
+        if self.songs_per_artist.from_recent_setlists != 0:
+            recent_tracks = list(filter(None, [self.find_track(track_name) for track_name in (
+                self.tracklist_scraper.get_artists_popular_recent_tracks(
+                    artist_name,self.songs_per_artist.from_recent_setlists, self.tracklist_search_pref.num_searched, self.tracklist_search_pref.inclusion_threshold
+                    ))]))
+        if self.songs_per_artist.from_popular_spotify != 0:
+            num_songs = self.songs_per_artist.total - len(recent_tracks)
+            top_tracks = self.spotipy.artist_top_tracks(artist_id)["tracks"][:num_songs]
+        return set([(','.join([artist["name"] for artist in track["artists"]]),track["name"],track["id"]) for track in itertools.chain(top_tracks,recent_tracks)])
 
     def find_track(self,track_name):
         print("Searching for",track_name)
