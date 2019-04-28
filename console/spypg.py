@@ -1,13 +1,16 @@
 import argparse
 import sys
-from PIL import Image
-from pytesseract import image_to_string
-from spypgen.playlistgenerator import PlaylistGenerator
 import json
 import os 
 import re
 
+from PIL import Image
+from pytesseract import image_to_string
+from spypgen.playlistgenerator import PlaylistGenerator
+
+
 class Generator:
+
     def __init__(self):
         parser = argparse.ArgumentParser(
             description = 'Provides various utilities related to generating Spotify playlists',
@@ -101,20 +104,16 @@ The most commonly used variants are:
             processed_artists = self.validate_artists(processed_artists, args.include_invalid, args.credentials)
         self.output_artists(processed_artists, args.output)
 
-
     def process_image(self, image_file, whitelist_chars, delimiter_chars):
         if image_file is None:
             print("No file was specified for scraping.")
             sys.exit(1)
-
         if not os.path.isfile(image_file):
             print("Specified file",image_file,"could not be found.")
             sys.exit(1)
-
         print("Processing image", image_file,"using Tesseract OCR...")
         return image_to_string(Image.open(image_file), config="-c tessedit_char_whitelist=" + whitelist_chars + delimiter_chars + " psm 6")
         
-
     def process_raw(self, raw_ocr_str, delimiter_chars):
         print("Cleaning OCR output...")
         sample_delim = ' ' + delimiter_chars[0] + ' '
@@ -134,7 +133,6 @@ The most commonly used variants are:
             #remove set qualifier based on presents (e.g. 'Ben Nicky Presents HF XTreme')
             stripped_artists[i] = re.sub(r'(PRESENTS|[P|p]resents|LIVE|[L|l]ive).*', '', artist)
         return [artist for artist in stripped_artists if len(artist) > 1]
-
 
     def validate_artists(self, unvalidated_artists, include_invalid, credentials):
         validated_artists = []

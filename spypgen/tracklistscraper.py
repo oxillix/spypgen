@@ -1,16 +1,14 @@
-from bs4 import BeautifulSoup
 import urllib.request
 import pprint 
 
-class Track:
-    def __init__(self, full_name, artist, available_on_spotify=False, plays=0):
-        self.full_name = full_name
-        self.artist = artist
-        self.available_on_spotify = available_on_spotify
-        self.plays = plays
+from collection import namedtuple
+from bs4 import BeautifulSoup
 
+
+Track = namedtuple('Track', ['full_name', 'artist', 'available_on_spotify','plays'])
 
 class TracklistScraper:
+
     def get_artists_popular_recent_tracks(self,artist_name,max_num_tracks,max_tracklists=5,threshold=0.5):
         plays_by_track = self.get_artist_tracks(artist_name,max_tracklists)
         sorted_tracks = sorted(plays_by_track, key=lambda k: (-plays_by_track[k][0],-plays_by_track[k][1]))

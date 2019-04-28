@@ -6,10 +6,12 @@ import os
 import pprint 
 import requests
 import socketserver
-import spotipy
-import spotipy.util as util
 import sys
 import webbrowser 
+
+import spotipy
+import spotipy.util as util
+
 from spypgen.tracklistscraper import TracklistScraper
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from collections import namedtuple
@@ -28,9 +30,11 @@ class RequestHandler(BaseHTTPRequestHandler):
 class Server(socketserver.TCPServer):
     allow_reuse_address = True
 
+
 SongCounts = namedtuple('SongCounts', ['total', 'from_popular_spotify', 'from_recent_setlists'])
 TracklistPreferences = namedtuple('TracklistPreferences', ['num_searched', 'inclusion_threshold'])
 class PlaylistGenerator:
+
     def __init__(self):
         self.username = ""
         self.access_token = ""
