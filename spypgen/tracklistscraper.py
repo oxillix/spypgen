@@ -1,7 +1,7 @@
 import urllib.request
 import pprint 
 
-from collection import namedtuple
+from collections import namedtuple
 from bs4 import BeautifulSoup
 
 

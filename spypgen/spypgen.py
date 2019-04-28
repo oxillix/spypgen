@@ -6,10 +6,10 @@ import re
 
 from PIL import Image
 from pytesseract import image_to_string
-from spypgen.playlistgenerator import PlaylistGenerator
+from playlistgenerator import PlaylistGenerator
 
 
-class Generator:
+class Application:
 
     def __init__(self):
         parser = argparse.ArgumentParser(
@@ -210,4 +210,4 @@ The most commonly used variants are:
 
 
 if __name__ == "__main__":
-    g = Generator()
+    app = Application()

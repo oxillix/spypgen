@@ -12,7 +12,7 @@ import webbrowser
 import spotipy
 import spotipy.util as util
 
-from spypgen.tracklistscraper import TracklistScraper
+from tracklistscraper import TracklistScraper
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from collections import namedtuple
 
