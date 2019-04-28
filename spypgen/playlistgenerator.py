@@ -38,6 +38,7 @@ class PlaylistGenerator:
         self.songs_per_artist = SongCounts(total=5,from_popular_spotify=5,from_recent_setlists=0)
         self.tracklist_search_pref = TracklistPreferences(5,0.5)
         self.tracklist_scraper = TracklistScraper()
+        self.strict_validation = False
 
     def authorize(self, username, client_id, client_secret, client_port):
         self.username = username
@@ -87,7 +88,7 @@ class PlaylistGenerator:
         print("Created playlist '",playlist_name,"'")
         tracks_by_artists = []
         for artist in playlist_artists:
-            (artist_name, artist_id) = self.find_artist(artist)
+            (artist_name, artist_id) = self.find_artist(artist, self.strict_validation)
             tracks_by_artists.extend(self.find_tracks(artist_name,artist_id))
         if len(tracks_by_artists) != 0:
             uniq_tracks_by_artists = set(tracks_by_artists)
@@ -97,12 +98,12 @@ class PlaylistGenerator:
             for track in uniq_tracks_by_artists:
                 print(track[1],'-',track[0])
 
-    def find_artist(self,artist_name):
+    def find_artist(self,artist_name,strict=False):
         print("Searching for artist",artist_name,"...")
         foundArtists = self.spotipy.search(artist_name,type='artist')["artists"]["items"]
         for artist in foundArtists:
-            if artist["name"] == artist_name:
-                return (artist_name, artist["id"])
+            if not strict or artist["name"].lower() == artist_name.lower():
+                return (artist["name"], artist["id"])
 
     def find_tracks(self,artist_name,artist_id):
         print("Finding top tracks for artist",artist_name,"...")
