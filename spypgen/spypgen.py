@@ -4,10 +4,11 @@ import json
 import os 
 import re
 
+import tqdmredirect
 from PIL import Image
 from pytesseract import image_to_string
 from playlistgenerator import PlaylistGenerator
-
+from tqdm import tqdm, trange
 
 class Application:
 
@@ -23,7 +24,7 @@ The most commonly used commands are:
         parser.add_argument('command', help='Subcommand to be run')
         args = parser.parse_args(sys.argv[1:2])
         if not hasattr(self, args.command):
-            print(args.command,'is not a recognized command!')
+            print(f"{args.command} is not a recognized command!")
             parser.print_help()
             exit(1)
         self.playlist_generator = PlaylistGenerator()
@@ -50,7 +51,6 @@ The most commonly used variants are:
             print("Unable to authenticate")
             sys.exit(1)
 
-        print("Generating playlist '", args.name, "' for user '", user, "'...", sep="")
         artists = None
         if args.playlist_preferences:
             if os.path.isfile(args.playlist_preferences):
@@ -62,8 +62,8 @@ The most commonly used variants are:
                     if song_preferences:
                         total_songs_per_artist = song_preferences.get('maxSongsPerArtist')
                         num_songs_recent_setlists = song_preferences.get('recentSetListSongs')
-                        num_songs_popular_spotify = song_preferences.get('topSpotifySongs')
-                        self.playlist_generator.set_song_count_preferences(total_songs_per_artist, num_songs_popular_spotify, num_songs_recent_setlists)                    
+                        include_popular_spotify = song_preferences.get('topSpotifySongs')
+                        self.playlist_generator.set_song_count_preferences(total_songs_per_artist, include_popular_spotify, num_songs_recent_setlists)                    
                     setlist_preferences = playlist_preferences.get("setlists")
                     if setlist_preferences:
                         num_searched = setlist_preferences.get('numberSearched')
@@ -109,9 +109,9 @@ The most commonly used variants are:
             print("No file was specified for scraping.")
             sys.exit(1)
         if not os.path.isfile(image_file):
-            print("Specified file",image_file,"could not be found.")
+            print(f"Specified file {image_file} could not be found.")
             sys.exit(1)
-        print("Processing image", image_file,"using Tesseract OCR...")
+        print("Processing image {image_file} using Tesseract OCR...")
         return image_to_string(Image.open(image_file), config="-c tessedit_char_whitelist=" + whitelist_chars + delimiter_chars + " psm 6")
         
     def process_raw(self, raw_ocr_str, delimiter_chars):
@@ -140,16 +140,19 @@ The most commonly used variants are:
         if not self.authorize_generator(credentials):
             print("Unable to authenticate with Spotify, which prevents validation of the artists")
         else:
-            for artist in unvalidated_artists:
-                spotify_artist = self.playlist_generator.find_artist(artist) 
-                if not spotify_artist and 'V' in artist:
-                    spotify_artist = self.playlist_generator.find_artist(re.sub('V','Y', artist))
-                if not spotify_artist:
-                    validated_artists.append((artist,"NotFound"))
-                else:
-                    validated_artists.append((artist,spotify_artist[0]))
+            with tqdmredirect.std_out_err_redirect_tqdm() as orig_stdout:
+                with tqdm(total=len(unvalidated_artists), unit="artist", desc="Validated artists", file=orig_stdout, dynamic_ncols=True) as pbar:
+                    for artist in unvalidated_artists:
+                        spotify_artist = self.playlist_generator.find_artist(artist) 
+                        if not spotify_artist and 'V' in artist:
+                            spotify_artist = self.playlist_generator.find_artist(re.sub('V','Y', artist))
+                        pbar.update(1)
+                        if not spotify_artist:
+                            validated_artists.append((artist,"NotFound"))
+                        else:
+                            validated_artists.append((artist,spotify_artist[0]))
         success_rate = len([artist for artist in validated_artists if artist[1] != 'NotFound'])/len(validated_artists)
-        print('Validated artists (',success_rate,'%):')
+        print(f"Validated artists ({success_rate}%):")
         for artist in validated_artists:
             print(artist)
         if include_invalid:
@@ -179,7 +182,7 @@ The most commonly used variants are:
 
     def authorize_generator(self, credentials_file):
         if not os.path.isfile(credentials_file):
-            print("Specified credentials file",credentials_file,"was not found, so authentication with Spotify cannot proceed.")
+            print(f"Specified credentials file {credentials_file} was not found, so authentication with Spotify cannot proceed.")
             return None
 
         with open(credentials_file) as file:
@@ -191,16 +194,16 @@ The most commonly used variants are:
         redirect_port = int(credentials.get("redirectLocalHostPort"))
 
         if user is None:
-            print("'user' not specified in",credentials_file)
+            print(f"'user' not specified in {credentials_file}")
             return None
         if client_id is None:
-            print("'clientId' not specified in",credentials_file)
+            print(f"'clientId' not specified in {credentials_file}")
             return None
         if client_secret is None:
-            print("'clientSecret' not specified in",credentials_file)   
+            print(f"'clientSecret' not specifiedin {credentials_file}")
             return None
         if redirect_port is None:
-            print("'redirectLocalHostPort' not specified in",credentials_file)
+            print(f"'redirectLocalHostPort' not specified in {credentials_file}")
             return None
 
         if self.playlist_generator.authorize(user,client_id,client_secret,redirect_port):

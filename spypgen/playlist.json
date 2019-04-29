@@ -5,7 +5,7 @@
     {
         "maxSongsPerArtist": 8,
         "recentSetListSongs": 5,
-        "topSpotifySongs": 3
+        "includeTopSpotifySongs": true
     },
     "setlists":
     {

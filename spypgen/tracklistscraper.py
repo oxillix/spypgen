@@ -9,7 +9,8 @@ Track = namedtuple('Track', ['full_name', 'artist', 'available_on_spotify','play
 
 class TracklistScraper:
 
-    def get_artists_popular_recent_tracks(self,artist_name,max_num_tracks,max_tracklists=5,threshold=0.5):
+    def get_artists_popular_recent_tracks(self,artist_name,max_num_tracks,max_tracklists=5,threshold=0.5,hook=None):
+        self.hook = hook
         plays_by_track = self.get_artist_tracks(artist_name,max_tracklists)
         sorted_tracks = sorted(plays_by_track, key=lambda k: (-plays_by_track[k][0],-plays_by_track[k][1]))
         recent_tracks = []
@@ -18,15 +19,17 @@ class TracklistScraper:
                 break
             if len(recent_tracks) == max_num_tracks:
                 break
-            print(track,'was played in',plays_by_track[track][0],'/',max_tracklists,'of',artist_name,'\'s recent sets')
+            print(f"Including {track} since it was played in {plays_by_track[track][0]}/{max_tracklists} of {artist_name}'s recent sets")
             recent_tracks.append(track)
         return recent_tracks
 
     def get_artist_tracks(self,artist_name,max_tracklists=5,spotify_tracks_only=True):
         tracklists = self.get_artist_tracklists(artist_name,max_tracklists)
+        self.invoke_hook()
         plays_by_tracklist = {}
         for tracklist in tracklists:
             tracks = self.get_tracklist_tracks(tracklist[0])
+            self.invoke_hook()
             for track in tracks:
                 if not spotify_tracks_only or (spotify_tracks_only and track.available_on_spotify):
                     if track.full_name in plays_by_tracklist:
@@ -79,10 +82,15 @@ class TracklistScraper:
         return tracks
     
     def get_page(self,target_url):
-        print('Accessing', target_url,'...')
+        print(f"Accessing {target_url}...")
+        self.invoke_hook()
         try:
             page = urllib.request.urlopen(target_url)
             return page
         except:
-            print('Unable to access',target_url)
+            print(f"Unable to access {target_url}")
             return None
+
+    def invoke_hook(self):
+        if self.hook:
+            self.hook()
