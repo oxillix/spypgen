@@ -39,24 +39,24 @@ class TracklistScraper:
         return plays_by_tracklist
 
     def get_artist_tracklists(self, artist_name,max_tracklists=None):
-        artist_name = artist_name.lower().replace(" & ","").replace("&","").replace(" ", "-")
-        target_url = "https://www.1001tracklists.com/dj/" + artist_name + "/index.html"
+        artist_name = artist_name.lower().replace(' & ','').replace('&','').replace(' ', '-')
+        target_url = f"https://www.1001tracklists.com/dj/{artist_name}/index.html"
         page = self.get_page(target_url)
         if page is None:
             return []
-        soup = BeautifulSoup(page.read(), "html.parser")
-        rows = soup.find_all('div', class_="tlLink")
+        soup = BeautifulSoup(page.read(), 'html.parser')
+        rows = soup.find_all('div', class_='tlLink')
         if max_tracklists is not None:
             rows = rows[:max_tracklists]
         links = [row.find_all('a', href=True)[0] for row in rows]
         return [(link['href'], link.contents[0]) for link in links]
 
     def get_tracklist_tracks(self, tracklist_link):
-        target_url = "https://www.1001tracklists.com" + tracklist_link
+        target_url = f"https://www.1001tracklists.com{tracklist_link}"
         page = self.get_page(target_url)
         if page is None:
             return []
-        soup = BeautifulSoup(page.read(), "html.parser")
+        soup = BeautifulSoup(page.read(), 'html.parser')
         rows = soup.find_all('tr', id=lambda x: x and x.startswith('tlp_'))
         tracks = []
         for row in rows:

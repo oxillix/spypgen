@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import argparse
 import sys
 import json
@@ -33,22 +34,22 @@ The most commonly used commands are:
 
     def generate(self):
         parser = argparse.ArgumentParser(
-            description = "Generates a playlist in Spotify based on supplied artists and preferences",
+            description = 'Generates a playlist in Spotify based on supplied artists and preferences',
             usage = '''spypgen generate [<args>]
 
 The most commonly used variants are:
     -c "credentials.json" -n "PlaylistName" -s "Artist 1,Artist2"     Generates a playlist with the given name using the list of artists and specified Spotify credentials
     -c "credentials.json" -p "playlist.json"    Generates a playlist using specified preferences/content and credentials            
 ''')
-        parser.add_argument("-n", "--name", help="Name for playlist")
-        parser.add_argument("-c","--credentials", default="credentials.json", help="File containing credentials information (user, client ID/secret, etc.) for Spotify ")
-        parser.add_argument("-s", "--source_artists", help="Artists used as a source for the generated playlist as a comma-delimited list")
-        parser.add_argument("-p", "--playlist_preferences", help="File containing preferences regarding playlist composition")
+        parser.add_argument('-n', '--name', help='Name for playlist')
+        parser.add_argument('-c','--credentials', default='credentials.json', help='File containing credentials information (user, client ID/secret, etc.) for Spotify ')
+        parser.add_argument('-s', '--source_artists', help='Artists used as a source for the generated playlist as a comma-delimited list')
+        parser.add_argument('-p', '--playlist_preferences', help='File containing preferences regarding playlist composition')
         args = parser.parse_args(sys.argv[2:])
     
         user = self.authorize_generator(args.credentials)
         if user is None:
-            print("Unable to authenticate")
+            print('Unable to authenticate')
             sys.exit(1)
 
         artists = None
@@ -56,15 +57,15 @@ The most commonly used variants are:
             if os.path.isfile(args.playlist_preferences):
                 with open(args.playlist_preferences) as file:
                     playlist_preferences = json.loads(file.read())
-                    artists = playlist_preferences.get("artists")
-                    playlist_name = playlist_preferences.get("name")
-                    song_preferences = playlist_preferences.get("targetSongCounts")
+                    artists = playlist_preferences.get('artists')
+                    playlist_name = playlist_preferences.get('name')
+                    song_preferences = playlist_preferences.get('targetSongCounts')
                     if song_preferences:
                         total_songs_per_artist = song_preferences.get('maxSongsPerArtist')
                         num_songs_recent_setlists = song_preferences.get('recentSetListSongs')
                         include_popular_spotify = song_preferences.get('topSpotifySongs')
                         self.playlist_generator.set_song_count_preferences(total_songs_per_artist, include_popular_spotify, num_songs_recent_setlists)                    
-                    setlist_preferences = playlist_preferences.get("setlists")
+                    setlist_preferences = playlist_preferences.get('setlists')
                     if setlist_preferences:
                         num_searched = setlist_preferences.get('numberSearched')
                         inclusion_threshhold = setlist_preferences.get('inclusionThreshold')
@@ -74,13 +75,13 @@ The most commonly used variants are:
             if args.source_artists and len(args.source_artists) > 0:
                 artists = args.source_artists.split(',')
             else:
-                print("No artists specified in a preferences file using --playlist_preferences or via --source_artists.")
+                print('No artists specified in a preferences file using --playlist_preferences or via --source_artists.')
                 sys.exit(1)
 
         if args.name:
             playlist_name = args.Name
         if playlist_name is None:
-            print("No playlist name specified in a preferences file using --playlist_preferences or via --name.")
+            print('No playlist name specified in a preferences file using --playlist_preferences or via --name.')
             sys.exit(1)
 
         self.playlist_generator.create_playlist(playlist_name, artists)
@@ -106,16 +107,16 @@ The most commonly used variants are:
 
     def process_image(self, image_file, whitelist_chars, delimiter_chars):
         if image_file is None:
-            print("No file was specified for scraping.")
+            print('No file was specified for scraping.')
             sys.exit(1)
         if not os.path.isfile(image_file):
             print(f"Specified file {image_file} could not be found.")
             sys.exit(1)
-        print("Processing image {image_file} using Tesseract OCR...")
-        return image_to_string(Image.open(image_file), config="-c tessedit_char_whitelist=" + whitelist_chars + delimiter_chars + " psm 6")
+        print(f"Processing image {image_file} using Tesseract OCR...")
+        return image_to_string(Image.open(image_file), config=f"-c tessedit_char_whitelist={whitelist_chars}{delimiter_chars} psm 6")
         
     def process_raw(self, raw_ocr_str, delimiter_chars):
-        print("Cleaning OCR output...")
+        print('Cleaning OCR output...')
         sample_delim = ' ' + delimiter_chars[0] + ' '
         processed_str = raw_ocr_str.replace('\n', sample_delim)
         #replace B2B and known misparsed variations (323, 828, etc.) with a delimiter character
@@ -136,19 +137,19 @@ The most commonly used variants are:
 
     def validate_artists(self, unvalidated_artists, include_invalid, credentials):
         validated_artists = []
-        print("Validating parsed artists...")
+        print('Validating parsed artists...')
         if not self.authorize_generator(credentials):
-            print("Unable to authenticate with Spotify, which prevents validation of the artists")
+            print('Unable to authenticate with Spotify, which prevents validation of the artists')
         else:
             with tqdmredirect.std_out_err_redirect_tqdm() as orig_stdout:
-                with tqdm(total=len(unvalidated_artists), unit="artist", desc="Validated artists", file=orig_stdout, dynamic_ncols=True) as pbar:
+                with tqdm(total=len(unvalidated_artists), unit='artist', desc='Validated artists', file=orig_stdout, dynamic_ncols=True) as pbar:
                     for artist in unvalidated_artists:
                         spotify_artist = self.playlist_generator.find_artist(artist) 
                         if not spotify_artist and 'V' in artist:
                             spotify_artist = self.playlist_generator.find_artist(re.sub('V','Y', artist))
                         pbar.update(1)
                         if not spotify_artist:
-                            validated_artists.append((artist,"NotFound"))
+                            validated_artists.append((artist,'NotFound'))
                         else:
                             validated_artists.append((artist,spotify_artist[0]))
         success_rate = len([artist for artist in validated_artists if artist[1] != 'NotFound'])/len(validated_artists)
@@ -188,10 +189,10 @@ The most commonly used variants are:
         with open(credentials_file) as file:
             credentials = json.loads(file.read())
 
-        user = credentials.get("user")
-        client_id = credentials.get("clientId")
-        client_secret = credentials.get("clientSecret")
-        redirect_port = int(credentials.get("redirectLocalHostPort"))
+        user = credentials.get('user')
+        client_id = credentials.get('clientId')
+        client_secret = credentials.get('clientSecret')
+        redirect_port = int(credentials.get('redirectLocalHostPort'))
 
         if user is None:
             print(f"'user' not specified in {credentials_file}")

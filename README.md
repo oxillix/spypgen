@@ -41,25 +41,23 @@ In order to use spypgen, you need to have valid Spotify credentials. Most of the
 
 ## Features
 
----
-
 ### Playlist Generation
 
 Playlist generation using __spypgen__ can use two different workflows depending on the configurability desired.
 
 #### Basic 
 
-```python
-$> spypgen generate -c "credentials.json" -n "PlaylistName" -s "Artist 1,Artist2"
+```shell
+spypgen generate -c "credentials.json" -n "PlaylistName" -s "Artist 1,Artist2"
 ```
 
 This generates a playlist with the given name with the default number of songs (5) for each of the artists provided in the comma-separated string based purely off of their popular Spotify songs. 
 
-```python
-$> spypgen generate -c "credentials.json" -p "playlist.json"   
-```
-
 #### Advanced
+
+```shell
+spypgen generate -c "credentials.json" -p "playlist.json"   
+```
 
 This generates a playlist based on detailed configurations specified in a JSON file that appears as follows:
 
@@ -173,6 +171,7 @@ spypgen scrape lineup.png -c credentials.json -v
 Leveraging existing Spotify credentials, __spypgen__ will query Spotify in order to validate each of the artists found. This allows for the correction of simple mistakes made during OCR.
 
 ```text
+Searching for artist REZZ...
 Found Rezz.
 Searching for artist RINZEN...
 Found Rinzen.

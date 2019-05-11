@@ -26,10 +26,10 @@ class RequestHandler(BaseHTTPRequestHandler):
         global auth_code
         auth_code = self.path.replace('/?code=', '')        
         done = True
-        self.send_response(200, "OK")
-        self.send_header("Content-Type", "text/html")
+        self.send_response(200, 'OK')
+        self.send_header('Content-Type', 'text/html')
         self.end_headers()
-        self.wfile.write("<html><body><h1>Authentication status: success!</h1>Now you can close this window.</body></html>".encode('utf-8'))
+        self.wfile.write('<html><body><h1>Authentication status: success!</h1>Now you can close this window.</body></html>'.encode('utf-8'))
 
 
 class Server(socketserver.TCPServer):
@@ -41,8 +41,8 @@ TracklistPreferences = namedtuple('TracklistPreferences', ['num_searched', 'incl
 class PlaylistGenerator:
 
     def __init__(self):
-        self.username = ""
-        self.access_token = ""
+        self.username = ''
+        self.access_token = ''
         self.spotipy = None
         self.songs_per_artist = SongCounts(total=5,include_popular_spotify=True,from_recent_setlists=0)
         self.tracklist_search_pref = TracklistPreferences(5,0.5)
@@ -53,13 +53,13 @@ class PlaylistGenerator:
     def authorize(self, username, client_id, client_secret, client_port):
         self.username = username
         scope = 'playlist-modify-public'
-        authorize_url = "https://accounts.spotify.com/authorize"
-        token_url = "https://accounts.spotify.com/api/token"
-        redirect_uri = "http://localhost:" + str(client_port)
-        authorization_url = authorize_url + '?client_id=' + client_id + '&response_type=code&redirect_uri=' + redirect_uri + '&scope=' + scope
+        authorize_url = 'https://accounts.spotify.com/authorize'
+        token_url = 'https://accounts.spotify.com/api/token'
+        redirect_uri = f"http://localhost:{str(client_port)}"
+        authorization_url = f"{authorize_url}?client_id={client_id}&response_type=code&redirect_uri={redirect_uri}&scope={scope}"
         print(f"Attempting to access {authorization_url}")
         webbrowser.open_new_tab(authorization_url)
-        httpd = Server(("localhost", client_port), RequestHandler)
+        httpd = Server(('localhost', client_port), RequestHandler)
         while not done:
             httpd.handle_request()
         data = {    
@@ -94,7 +94,7 @@ class PlaylistGenerator:
             with tqdm(total=pbar_len, file=orig_stdout, dynamic_ncols=True) as pbar:
                 self.progress_bar = pbar
                 #Cannot specify description without JSON errors resulting in Spotipy
-                playlistId = self.spotipy.user_playlist_create(self.username, playlist_name, public)["id"]
+                playlistId = self.spotipy.user_playlist_create(self.username, playlist_name, public)['id']
                 print(f"Created playlist '{playlist_name}'")
                 tracks_by_artists = []
                 for artist in playlist_artists:
@@ -105,19 +105,19 @@ class PlaylistGenerator:
                     uniq_tracks_by_artists = set(tracks_by_artists)
                     self.spotipy.user_playlist_add_tracks(self.username, playlistId, set([track[2] for track in uniq_tracks_by_artists]))
                     print(f"Added {len(uniq_tracks_by_artists)} tracks to playlist '{playlist_name}'")
-                    print("Tracklist:")
+                    print('Tracklist:')
                     for track in uniq_tracks_by_artists:
                         print(f"{track[1]} - {track[0]}")
                 self.complete_progress()
 
     def find_artist(self,artist_name,strict=False):
         print(f"Searching for artist {artist_name}...")
-        foundArtists = self.spotipy.search(artist_name,type='artist')["artists"]["items"]
+        foundArtists = self.spotipy.search(artist_name,type='artist')['artists']['items']
         for artist in foundArtists:
-            found_artist_name = artist["name"]
+            found_artist_name = artist['name']
             if not strict or found_artist_name.lower() == artist_name.lower():
                 print(f"Found {found_artist_name}.")
-                return (found_artist_name, artist["id"])
+                return (found_artist_name, artist['id'])
             return None
 
     def find_tracks(self,artist_name,artist_id):
@@ -134,13 +134,13 @@ class PlaylistGenerator:
                     ))]))
         if self.songs_per_artist.include_popular_spotify and self.songs_per_artist.total > len(recent_tracks):
             num_songs = self.songs_per_artist.total - len(recent_tracks)
-            top_tracks = self.spotipy.artist_top_tracks(artist_id)["tracks"][:num_songs]
+            top_tracks = self.spotipy.artist_top_tracks(artist_id)['tracks'][:num_songs]
             self.update_pbar(num_songs)
-        return set([(','.join([artist["name"] for artist in track["artists"]]),track["name"],track["id"]) for track in itertools.chain(top_tracks,recent_tracks)])
+        return set([(','.join([artist['name'] for artist in track['artists']]),track['name'],track['id']) for track in itertools.chain(top_tracks,recent_tracks)])
 
     def find_track(self,track_name):
         print(f"Searching for {track_name}...")
-        results = self.spotipy.search(track_name.replace("ft.","").replace("&",""),type='track')['tracks']['items']
+        results = self.spotipy.search(track_name.replace('ft.','').replace('&',''),type='track')['tracks']['items']
         self.update_pbar()
         if len(results) == 0:
             return None
