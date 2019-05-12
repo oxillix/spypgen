@@ -38,13 +38,13 @@ class TracklistScraper:
                         plays_by_tracklist[track.full_name] = (1,track.plays)
         return plays_by_tracklist
 
-    def get_artist_tracklists(self, artist_name,max_tracklists=None):
+    def get_artist_tracklists(self, artist_name, max_tracklists=None):
         artist_name = artist_name.lower().replace(' & ','').replace('&','').replace(' ', '-')
         target_url = f"https://www.1001tracklists.com/dj/{artist_name}/index.html"
         page = self.get_page(target_url)
         if page is None:
             return []
-        soup = BeautifulSoup(page.read(), 'html.parser')
+        soup = BeautifulSoup(page, 'html.parser')
         rows = soup.find_all('div', class_='tlLink')
         if max_tracklists is not None:
             rows = rows[:max_tracklists]
@@ -56,7 +56,7 @@ class TracklistScraper:
         page = self.get_page(target_url)
         if page is None:
             return []
-        soup = BeautifulSoup(page.read(), 'html.parser')
+        soup = BeautifulSoup(page, 'html.parser')
         rows = soup.find_all('tr', id=lambda x: x and x.startswith('tlp_'))
         tracks = []
         for row in rows:
@@ -86,7 +86,7 @@ class TracklistScraper:
         self.invoke_hook()
         try:
             page = urllib.request.urlopen(target_url)
-            return page
+            return page.read()
         except:
             print(f"Unable to access {target_url}")
             return None
