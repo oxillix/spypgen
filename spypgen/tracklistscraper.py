@@ -9,6 +9,9 @@ Track = namedtuple('Track', ['full_name', 'artist', 'available_on_spotify','play
 
 class TracklistScraper:
 
+    def __init__(self):
+        self.hook = None
+
     def get_artists_popular_recent_tracks(self,artist_name,max_num_tracks,max_tracklists=5,threshold=0.5,hook=None):
         self.hook = hook
         plays_by_track = self.get_artist_tracks(artist_name,max_tracklists)
@@ -60,27 +63,32 @@ class TracklistScraper:
         rows = soup.find_all('tr', id=lambda x: x and x.startswith('tlp_'))
         tracks = []
         for row in rows:
-            metadata_div = row.find('div',class_='tlToogleData')
-            if metadata_div:
-                track_meta = metadata_div.find('meta',itemprop='name')
-                if track_meta is None:
-                    continue 
-                track_name = track_meta['content']
-                artist_meta = metadata_div.find('meta',itemprop='byArtist')
-                if artist_meta is None:
-                    continue
-                artist_name = artist_meta['content']
-                plays_and_media_div = row.find('div',class_='addMedia')
-                plays = 0
-                available_on_spotify = False
-                if plays_and_media_div:
-                    plays_span = plays_and_media_div.find('span',class_='badge playC')
-                    if plays_span:
-                        plays = plays_span.contents[1]
-                    available_on_spotify = plays_and_media_div.find('i', class_=lambda x: x and 'spotify' in x) != None
-                tracks.append(Track(track_name, artist_name, available_on_spotify, int(plays)))
+            track = self.get_track(row)
+            if track is not None:
+                tracks.append(track)
+            
         return tracks
-    
+
+    def get_track(self, unparsed_track_soup):
+        metadata_div = unparsed_track_soup.find('div',class_='tlToogleData')
+        if not metadata_div:
+            return None
+        track_meta = metadata_div.find('meta',itemprop='name')
+        if track_meta is None:
+            return None
+        track_name = track_meta['content']
+        artist_meta = metadata_div.find('meta',itemprop='byArtist')
+        if artist_meta is None:
+            return None
+        artist_name = artist_meta['content']
+        plays = 0
+        available_on_spotify = False
+        plays_span = unparsed_track_soup.find('span',class_='badge playC')
+        if plays_span:
+            plays = plays_span.contents[1]
+        available_on_spotify = unparsed_track_soup.find('i', class_=lambda x: x and 'spotify' in x, onclick = lambda x: x != None) != None
+        return Track(track_name, artist_name, available_on_spotify, int(plays))
+
     def get_page(self,target_url):
         print(f"Accessing {target_url}...")
         self.invoke_hook()
