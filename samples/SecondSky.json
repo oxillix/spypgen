@@ -1,0 +1,16 @@
+{
+    "name": "Second Sky",
+    "artists": ["Porter Robinson","Madeon","Cashmere Cat","Kero Kero Bonito","Chrome Sparks","Anamanaguchi","Wednesday Campanella","Nina Las Vegas"],
+    "targetSongCounts":
+    {
+        "maxSongsPerArtist": 8,
+        "recentSetListSongs": 5,
+        "includeTopSpotifySongs": true
+    },
+    "setlists":
+    {
+        "numberSearched": 5,
+        "inclusionThreshold": 0.5
+    },
+    "strictSearch": false
+}

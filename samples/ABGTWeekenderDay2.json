@@ -1,0 +1,16 @@
+{
+    "name": "ABGT Weekender 2019 - Day 2",
+    "artists": ["Ben Bohmer","Cubicolor", "Eli & Fur", "James Grant", "Jody Wisternoff", "Marsh", "Nox Vahn", "Yotto"],
+    "targetSongCounts":
+    {
+        "maxSongsPerArtist": 8,
+        "recentSetListSongs": 5,
+        "includeTopSpotifySongs": true
+    },
+    "setlists":
+    {
+        "numberSearched": 5,
+        "inclusionThreshold": 0.5
+    },
+    "strictSearch": false
+}
