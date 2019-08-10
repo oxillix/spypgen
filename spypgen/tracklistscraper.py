@@ -66,7 +66,6 @@ class TracklistScraper:
             track = self.get_track(row)
             if track is not None:
                 tracks.append(track)
-            
         return tracks
 
     def get_track(self, unparsed_track_soup):
@@ -86,8 +85,12 @@ class TracklistScraper:
         plays_span = unparsed_track_soup.find('span',class_='badge playC')
         if plays_span:
             plays = plays_span.contents[1]
+            if plays.endswith('k'):
+                plays = float(plays[:-1])*1000
+            else:
+                plays = int(plays)
         available_on_spotify = unparsed_track_soup.find('i', class_=lambda x: x and 'spotify' in x, onclick = lambda x: x != None) != None
-        return Track(track_name, artist_name, available_on_spotify, int(plays))
+        return Track(track_name, artist_name, available_on_spotify, plays)
 
     def get_page(self,target_url):
         print(f"Accessing {target_url}...")
