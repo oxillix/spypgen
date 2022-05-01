@@ -9,7 +9,7 @@ _spypgen_ makes it easy to create playlists in Spotify based on a combination of
 ### Install dependencies
 
 ```shell
-python -m pip install requirements.txt
+python -m pip install -r requirements.txt
 ```
 
 ### Get Credentials
